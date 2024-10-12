@@ -74,7 +74,7 @@ bool Connectionpool::loadConfigFile()
 	return true;
 }
 
-Connectionpool::Connectionpool()
+Connectionpool::Connectionpool:_stop(false)()
 {
 
 	if (!loadConfigFile())
@@ -103,11 +103,11 @@ void Connectionpool::produceConnectionTask()
 	for (;;)
 	{
 		unique_lock<mutex> lock(_queueMutex);
-		while (!_connectionQue.empty())
+		while (!_connectionQue.empty()&&!_stop)
 		{
 			cv.wait(lock); // 
 		}
-
+		if(_stop){break;}
 		
 		if (_connectionCnt < _maxSize)
 		{
@@ -176,5 +176,21 @@ void Connectionpool::scannerConnectionTask()
 				break; // 队头的连接没有超过_maxIdleTime，其他连接肯定没有
 			}
 		}
+
+		if(_stop) {
+			while(!_connectionQue.empty()) {
+					Connection *p = _connectionQue.front();
+					_connectionQue.pop();
+					delete p;
+			}
+			_sem.release();
+			break;
+		}
 	}
+}
+
+ConnectionPool::~ConnectionPool() {
+    _stop = true;
+    cv.notify_all(); // 模拟一下消费者，唤醒生产者
+    _sem.acquire();
 }

@@ -18,6 +18,7 @@ public:
 	shared_ptr<Connection> getConnection();//给外部提供接口，从连接池获取一个可用的空闲连接
 private:
 	Connectionpool();//单例1 
+	~Connectionpool();
 
 	bool loadConfigFile();//从配置文件中加载配置项
 	//运行在独立的线程中，专门负责产生新连接
@@ -38,4 +39,7 @@ private:
 	mutex _queueMutex;//维护连接队列的线程安全互斥锁
 	atomic_int _connectionCnt;//记录所创建的connection连接的总数量
 	condition_variable cv;//
+
+	std::atomic_bool _stop;
+	std::counting_semaphore<1> _sem{0};
 };
